@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,96 +12,102 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import Link from "next/link";
 
 export default function RegisterPage() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Integrate with your registration logic here
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Something went wrong");
+      }
+
+      // On successful registration, redirect to the login page
+      router.push("/login");
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="w-full max-w-md mx-auto py-10 px-4">
-      <Card className="w-full shadow-lg bg-white">
+    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <Card className="mx-auto max-w-sm">
         <CardHeader>
-          <CardTitle className="text-xl font-bold text-brand-700">Sign Up</CardTitle>
+          <CardTitle className="text-2xl">Register</CardTitle>
           <CardDescription>
             Enter your information to create an account
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="first-name" className="font-semibold text-brand-700">
-                  First name
-                </Label>
-                <Input
-                  id="first-name"
-                  placeholder="Max"
-                  required
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="last-name" className="font-semibold text-brand-700">
-                  Last name
-                </Label>
-                <Input
-                  id="last-name"
-                  placeholder="Robinson"
-                  required
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="w-full mt-1"
-                />
-              </div>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                placeholder="John Doe"
+                required
+                onChange={handleChange}
+                value={formData.fullName}
+              />
             </div>
-            <div>
-              <Label htmlFor="email" className="font-semibold text-brand-700">
-                Email
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="m@example.com"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full mt-1"
+                onChange={handleChange}
+                value={formData.email}
               />
             </div>
-            <div>
-              <Label htmlFor="password" className="font-semibold text-brand-700">
-                Password
-              </Label>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full mt-1"
+                onChange={handleChange}
+                value={formData.password}
               />
             </div>
-            <div className="space-y-2 pt-2">
-              <Button type="submit" className="w-full font-semibold bg-brand-600 hover:bg-brand-700 text-white transition">
-                Create an account
-              </Button>
-              <Button variant="outline" className="w-full">
-                Sign up with Google
-              </Button>
-            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Creating Account..." : "Create an account"}
+            </Button>
           </form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}
-            <Link href="/login" className="underline text-brand-600 hover:text-brand-700 transition-colors">
+            <Link href="/login" className="underline">
               Sign in
             </Link>
           </div>
